@@ -10,7 +10,7 @@ const fs = require('fs');
 let matchingCnt = 0;
 let nonMatchingCnt = 0;
 let objCnt = 0;
-let res = ''
+let res = {}
 
 function compare(a,b) {
   if (a.rate < b.rate)
@@ -20,28 +20,57 @@ function compare(a,b) {
   return 0;
 }
 
+function traverseAndFlatten(currentNode, target, flattenedKey) {
+    for (var key in currentNode) {
+        if (currentNode.hasOwnProperty(key)) {
+            var newKey;
+            if (flattenedKey === undefined) {
+                newKey = key;
+            } else {
+                newKey = flattenedKey + '.' + key;
+            }
+
+            var value = currentNode[key];
+            if (typeof value === "object") {
+                traverseAndFlatten(value, target, newKey);
+            } else {
+                target[newKey] = value;
+            }
+        }
+    }
+}
+
+
+function flatten(obj) {
+    var flattenedObject = {};
+    traverseAndFlatten(obj, flattenedObject);
+    return flattenedObject;
+}
+
 function recursiveJsonParser(obj) {
   objCnt += Object.keys(obj).length;
   // console.log(obj)
   //console.log(` ${Object.keys(obj).length}`)
   Object.keys(obj).forEach((key)=>{
-    if (typeof obj[key] == 'object') {
-     recursiveJsonParser(obj[key])
-    } else {
       let match = false
       var matchlist=[]
-      for (i in oUs) {
-        // console.log(`i: ${i}`)
-        let matchrate = ssim.compareTwoStrings(oUs[i].toLowerCase() ,obj[key].toLowerCase() ) 
+      for (i in cUs) {
+        //console.log(i)
+        if (typeof i == 'object') {
+            recursiveJsonParser(i)
+            //res+= i+'\n'
+        }
+        //console.log(`i: ${i}   typeof ${typeof(i)}`)
+        
+        let matchrate = ssim.compareTwoStrings(cUs[i].toLowerCase() ,obj[key].toLowerCase() ) 
           if(matchrate > 0.5){
-            //console.log('fuck')
           match = true
-          // console.log(`${i} == ${key} [${obj[key]}]"`)
+        // console.log(`${i} == ${key} [${obj[key]}]"`)
           //match = true
           //console.log(`${key}  match rate ${matchrate}`)
           matchlist.push({
-            key: i,
-            text:oUs[i],
+            key: i ,
+            text:cUs[i],
             rate:matchrate
           }) 
         }
@@ -51,14 +80,18 @@ function recursiveJsonParser(obj) {
 
       if(match)
       {
-        
+        /*
         res += `${key} match rate ${matchlist[0].rate}\n`
         res += '   '+obj[key]+'\n'
         res += '   '+matchlist[0].text+'\n'
-        console.log(`${key} match rate ${matchlist[0].rate}`)
-        console.log('   '+obj[key])
-        console.log('   '+matchlist[0].text)
-        
+        */
+
+       // console.log(`${key} match rate ${matchlist[0].rate}`)
+        //console.log('   '+obj[key])
+        //console.log('   '+matchlist[0].text)
+        //console.log(res)
+      
+        res[key] = matchlist[0].key
       }
 
 
@@ -66,13 +99,16 @@ function recursiveJsonParser(obj) {
 
       match? matchingCnt++:  nonMatchingCnt++;
       if (!match) {
-        res += key+'\n'
-        console.log('   '+obj[key])
+        res[key] = 'errorNOmatchQAQ'
+        //console.log('fuck')
+        //console.log(key)
+        //console.log(res)
+        //console.log('   '+obj[key])
  //       console.log('val ' + val);
         //run(`echo ${key}  >> not_match`);
         //console.log(`${key} not match`)
       }
-    }
+    
   })
    console.log('matching ' + matchingCnt);
    console.log('n matching ' + nonMatchingCnt);
@@ -80,10 +116,14 @@ function recursiveJsonParser(obj) {
 };
 
 
-recursiveJsonParser(cUs);
-fs.writeFileSync('recond',res)
+//console.log( flatten(oUs) )
+recursiveJsonParser(flatten(oUs));
+//console.log(cUs)
+console.log(res)
+//res = flatten(oUs)
+fs.writeFileSync('./record.json',JSON.stringify(res))
 
-
+//fs.writeFileSync('./record.json','fuck')
 
 
 function run(cmd) {
